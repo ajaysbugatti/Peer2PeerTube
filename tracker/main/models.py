@@ -2,6 +2,8 @@
 from __future__ import unicode_literals
 
 from django.db import models
+from rest_framework import serializers
+
 
 # Create your models here.
 
@@ -16,9 +18,6 @@ class File(models.Model):
     users = models.ManyToManyField(UserNode, related_name='files', blank=True)
 
 
-
-from rest_framework import serializers
-
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserNode
@@ -27,8 +26,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 class FileSerializer(serializers.ModelSerializer):
     users = UserSerializer(many=True)
+
     class Meta:
         model = File
         fields = '__all__'
-
-
