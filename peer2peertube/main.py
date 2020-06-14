@@ -136,8 +136,7 @@ class Gui(Frame):
         self.searchEntry.delete(0, len(key))
 
         for p in self.peer.getpeerids():
-            self.peer.sendtopeer(p,
-                                 QUERY, "%s %s 4" % (self.peer.myid, key))
+            self.peer.sendtopeer(p, QUERY, "%s %s 4" % (self.peer.myid, key))
 
     def onFetch(self):
         sels = self.fileList.curselection()
@@ -181,7 +180,7 @@ def main():
     maxpeers = sys.argv[2]
     peerid = sys.argv[3]
     app = Gui(firstpeer=peerid, maxpeers=maxpeers, serverport=serverport)
-    # app.mainloop()
+    app.mainloop()
 
 
 # setup and run app

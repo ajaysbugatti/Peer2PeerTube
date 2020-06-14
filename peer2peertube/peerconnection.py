@@ -1,6 +1,7 @@
 import os
 import socket
 import struct
+import sys
 import threading
 import time
 import traceback
@@ -78,11 +79,13 @@ class Peer:
         self.__debug('Connected ' + str(clientsock.getpeername()))
 
         host, port = clientsock.getpeername()
-        peerconn = PeerConnection(None, host, port, clientsock, debug=False)
-
+        peerconn = PeerConnection(None, host, port, clientsock, debug=True)
         try:
             msgtype, msgdata = peerconn.recvdata()
-            if msgtype: msgtype = msgtype.upper()
+            if msgtype:
+                msgtype = msgtype.decode('ascii').upper()
+            if msgdata:
+                msgdata = msgdata.decode('ascii').upper()
             if msgtype not in self.handlers:
                 self.__debug('Not handled: %s: %s' % (msgtype, msgdata))
             else:
@@ -241,7 +244,7 @@ class Peer:
 
             if waitreply:
                 onereply = peerconn.recvdata(file_recv, msgdata)
-                while (onereply != (None, None)):
+                while onereply != (None, None):
                     msgreply.append(onereply)
                     self.__debug('Got reply %s: %s'
                                  % (pid, str(msgreply)))
@@ -273,7 +276,8 @@ class Peer:
                 isconnected = True
             except:
                 todelete.append(pid)
-            if isconnected: peerconn.close()
+            if isconnected:
+                peerconn.close()
 
         self.peerlock.acquire()
         try:
@@ -291,6 +295,7 @@ class Peer:
         while not self.shutdown:
             try:
                 self.__debug('Listening for connections...')
+                print()
                 clientsock, clientaddr = s.accept()
                 clientsock.settimeout(None)
 
@@ -318,18 +323,18 @@ class PeerConnection:
 
         self.id = peerid
         self.debug = debug
-        print("PeerConnection: ", host, port)
+        print("PeerConnection: ", peerid, host, port)
         if not sock:
             self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.s.connect((host, int(port)))
         else:
             self.s = sock
 
-        self.sd = self.s.makefile('rw', 0)
+        # self.sd = self.s.makefile('rw', 0)
 
     def __makemsg(self, msgtype, msgdata):
         msglen = len(msgdata)
-        msg = struct.pack("!4sL%ds" % msglen, msgtype, msglen, msgdata)
+        msg = struct.pack("!4sL%ds" % msglen, msgtype.encode('ascii'), msglen, msgdata.encode('ascii'))
         return msg
 
     def __debug(self, msg):
@@ -343,11 +348,11 @@ class PeerConnection:
         Send a message through a peer connection. Returns True on success
         or False if there was an error.
         """
-
         try:
             msg = self.__makemsg(msgtype, msgdata)
-            self.sd.write(msg)
-            self.sd.flush()
+            # self.sd.write(msg)
+            self.s.send(msg)
+            # self.sd.flush()
         except KeyboardInterrupt:
             raise
         except:
@@ -366,14 +371,15 @@ class PeerConnection:
         if not fname and file_recv:
             fname = os.path.join(os.getcwd(), fname)
         try:
-            msgtype = self.sd.read(4)
-            if not msgtype: return (None, None)
+            msgtype = self.s.recv(4)
+            if not msgtype:
+                return None, None
 
-            lenstr = self.sd.read(4)
+            lenstr = self.s.recv(4)
             msglen = int(struct.unpack("!L", lenstr)[0])
-            msg = ""
+            msg = b""
             while len(msg) != msglen:
-                data = self.sd.read(min(2048, msglen - len(msg)))
+                data = self.s.recv(min(2048, msglen - len(msg)))
                 if file_recv:
                     if not os.path.isfile(fname):
                         fd = open(fname, 'w')
@@ -397,16 +403,17 @@ class PeerConnection:
                 msg += data
 
             if len(msg) != msglen:
-                return (None, None)
+                return None, None
 
         except KeyboardInterrupt:
             raise
         except:
+            traceback.print_exc()
             if self.debug:
                 traceback.print_exc()
-            return (None, None)
+            return None, None
 
-        return (msgtype, msg)
+        return msgtype, msg
 
     def close(self):
         """
@@ -418,7 +425,7 @@ class PeerConnection:
 
         self.s.close()
         self.s = None
-        self.sd = None
+        # self.sd = None
 
     def __str__(self):
         return "|%s|" % self.id

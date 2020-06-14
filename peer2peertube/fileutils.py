@@ -84,6 +84,7 @@ class FilerPeer(Peer):
                     peerconn.senddata(ERROR, 'Join: peer already inserted %s'
                                       % peerid)
             except:
+                traceback.print_exc()
                 self.__debug('invalid insert %s: %s' % (str(peerconn), data))
                 peerconn.senddata(ERROR, 'Join: incorrect arguments')
         finally:
@@ -237,8 +238,8 @@ class FilerPeer(Peer):
         self.__debug("Building peers from (%s,%s)" % (host, port))
 
         try:
-            msgreply = self.connectandsend(host, port, PEERNAME, '')
-            _, peerid = msgreply[0]
+            _, peerid = self.connectandsend(host, port, PEERNAME, '')[0]
+            peerid = peerid.decode('ascii')
             self.__debug("contacted " + peerid)
             resp = self.connectandsend(host, port, INSERTPEER,
                                        '%s %s %d' % (self.myid,
