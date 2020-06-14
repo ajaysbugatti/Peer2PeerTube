@@ -14,6 +14,8 @@ class Gui(Frame):
         self.createWidgets()
         self.master.title("Peer to Peer Youtube %d" % serverport)
         self.peer = FilerPeer(maxpeers, serverport)
+        self.peer.load_all_peer_saved()
+        self.peer.reestablish_connections()
 
         self.bind("<Destroy>", self.__onDestroy)
 
@@ -32,6 +34,7 @@ class Gui(Frame):
         self.after(3000, self.onTimer)
 
     def __onDestroy(self, event):
+        self.peer.dump_peer()
         self.peer.shutdown = True
 
     def updatePeerList(self):

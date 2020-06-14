@@ -1,5 +1,6 @@
+import pickle
+
 from .peerconnection import *
-import os
 
 PEERNAME = "NAME"
 LISTPEERS = "LIST"
@@ -11,6 +12,7 @@ PEERQUIT = "QUIT"
 
 REPLY = "REPL"
 ERROR = "ERRO"
+
 
 # Assumption in this program:
 #   peer id's in this application are just "host:port" strings
@@ -239,7 +241,6 @@ class FilerPeer(Peer):
 
         try:
             _, peerid = self.connectandsend(host, port, PEERNAME, '')[0]
-            peerid = peerid.decode('ascii')
             self.__debug("contacted " + peerid)
             resp = self.connectandsend(host, port, INSERTPEER,
                                        '%s %s %d' % (self.myid,
@@ -265,6 +266,34 @@ class FilerPeer(Peer):
             if self.debug:
                 traceback.print_exc()
                 self.removepeer(peerid)
+
+    def dump_peer(self):
+        """
+        Save the list of all peer to the file
+        """
+        print(self.all_peers)
+        with open('all_peer.pickle', 'wb') as fp:
+            pickle.dump(self.all_peers, fp, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def load_all_peer_saved(self):
+        """
+        Get the list of all peers ever connected with
+        """
+        with open('all_peer.pickle', 'rb') as fp:
+            all_peers_loaded = pickle.load(fp)
+            for key, value in all_peers_loaded.items():
+                if key not in self.all_peers:
+                    self.all_peers[key] = value
+
+    def reestablish_connections(self):
+        """
+        Attempt to connect to already connected peers (in the past) using all_peers
+        """
+        for key, value in self.all_peers.items():
+            if key not in self.peers:
+                print(value)
+                t = threading.Thread(target=self.buildpeers, args=[*value, 3])
+                t.start()
 
     def addlocalfile(self, filename):
         """ Registers a locally-stored file with the peer.

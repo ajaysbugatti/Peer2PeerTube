@@ -49,6 +49,8 @@ class Peer:
         # peers list (maybe better to use
         # threading.RLock (reentrant))
         self.peers = {}  # peerid ==> (host, port) mapping
+        self.all_peer_lock = threading.Lock()  # ensure proper access to
+        self.all_peers = {}  # peerid ==> (host, port) mapping
         self.shutdown = False  # used to stop the main loop
 
         self.handlers = {}
@@ -83,9 +85,9 @@ class Peer:
         try:
             msgtype, msgdata = peerconn.recvdata()
             if msgtype:
-                msgtype = msgtype.decode('ascii').upper()
+                msgtype = msgtype.upper()
             if msgdata:
-                msgdata = msgdata.decode('ascii').upper()
+                msgdata = msgdata.upper()
             if msgtype not in self.handlers:
                 self.__debug('Not handled: %s: %s' % (msgtype, msgdata))
             else:
@@ -140,6 +142,8 @@ class Peer:
     def addpeer(self, peerid, host, port):
         """ Adds a peer name and host:port mapping to the known list of peers.
         """
+        if peerid not in self.all_peers:
+            self.all_peers[peerid] = (host, int(port))
         if peerid not in self.peers and (self.maxpeers == 0 or len(self.peers) < self.maxpeers):
             self.peers[peerid] = (host, int(port))
             return True
@@ -282,7 +286,8 @@ class Peer:
         self.peerlock.acquire()
         try:
             for pid in todelete:
-                if pid in self.peers: del self.peers[pid]
+                if pid in self.peers:
+                    del self.peers[pid]
         finally:
             self.peerlock.release()
 
@@ -413,7 +418,7 @@ class PeerConnection:
                 traceback.print_exc()
             return None, None
 
-        return msgtype, msg
+        return msgtype.decode('ascii'), msg.decode('ascii')
 
     def close(self):
         """
