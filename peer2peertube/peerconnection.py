@@ -1,7 +1,6 @@
 import os
 import socket
 import struct
-import sys
 import threading
 import time
 import traceback
@@ -21,7 +20,7 @@ class Peer:
     P2P network.
     """
 
-    def __init__(self, maxpeers, serverport, myid=None, serverhost=None):
+    def __init__(self, maxpeers, serverport, alias, myid=None, serverhost=None):
         """ Initializes a peer servent (sic.) with the ability to catalog
         information for up to maxpeers number of peers (maxpeers may
         be set to 0 to allow unlimited number of peers), listening on
@@ -31,7 +30,8 @@ class Peer:
         Internet host like Google.
         """
 
-        self.debug = 1
+        self.debug = True
+        self.alias = alias
 
         self.maxpeers = int(maxpeers)
         self.serverport = int(serverport)
@@ -86,8 +86,6 @@ class Peer:
             msgtype, msgdata = peerconn.recvdata()
             if msgtype:
                 msgtype = msgtype.upper()
-            if msgdata:
-                msgdata = msgdata.upper()
             if msgtype not in self.handlers:
                 self.__debug('Not handled: %s: %s' % (msgtype, msgdata))
             else:
@@ -247,7 +245,7 @@ class Peer:
             self.__debug('Sent %s: %s' % (pid, msgtype))
 
             if waitreply:
-                onereply = peerconn.recvdata(file_recv, msgdata)
+                onereply = peerconn.recvdata(file_recv, msgdata, self.alias)
                 while onereply != (None, None):
                     msgreply.append(onereply)
                     self.__debug('Got reply %s: %s'
@@ -337,9 +335,9 @@ class PeerConnection:
 
         # self.sd = self.s.makefile('rw', 0)
 
-    def __makemsg(self, msgtype, msgdata):
+    def __makemsg(self, msgtype, msgdata: bytearray):
         msglen = len(msgdata)
-        msg = struct.pack("!4sL%ds" % msglen, msgtype.encode('ascii'), msglen, msgdata.encode('ascii'))
+        msg = struct.pack("!4sL%ds" % msglen, msgtype.encode('ascii'), msglen, msgdata)
         return msg
 
     def __debug(self, msg):
@@ -353,6 +351,9 @@ class PeerConnection:
         Send a message through a peer connection. Returns True on success
         or False if there was an error.
         """
+        if isinstance(msgdata, str):
+            msgdata = msgdata.encode('ascii')
+        print('senddata', msgtype, msgdata)
         try:
             msg = self.__makemsg(msgtype, msgdata)
             # self.sd.write(msg)
@@ -366,13 +367,15 @@ class PeerConnection:
             return False
         return True
 
-    def recvdata(self, file_recv=False, fname=None):
+    def recvdata(self, file_recv=False, fname=None, alias=None):
         """
         recvdata() -> (msgtype, msgdata)
 
         Receive a message from a peer connection. Returns (None, None)
         if there was any error.
         """
+        if fname:
+            fname = 'peer2peertube/shared/%s/%s' % (alias, fname)
         if not fname and file_recv:
             fname = os.path.join(os.getcwd(), fname)
         try:
@@ -387,7 +390,7 @@ class PeerConnection:
                 data = self.s.recv(min(2048, msglen - len(msg)))
                 if file_recv:
                     if not os.path.isfile(fname):
-                        fd = open(fname, 'w')
+                        fd = open(fname, 'wb')
                         fd.write(data)
                         fd.close()
                         print('reading data')
@@ -398,7 +401,7 @@ class PeerConnection:
                         player.set_media(media)
                         player.play()
                     else:
-                        fp = open(fname, 'a')
+                        fp = open(fname, 'ab')
                         fp.write(data)
                         fp.close()
 

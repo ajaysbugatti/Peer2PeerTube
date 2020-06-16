@@ -22,14 +22,14 @@ class FilerPeer(Peer):
     P2P framework.
     """
 
-    def __init__(self, maxpeers, serverport):
+    def __init__(self, maxpeers, serverport, alias):
         """ Initializes the peer to support connections up to maxpeers number
         of peers, with its server listening on the specified port. Also sets
         the dictionary of local files to empty and adds handlers to the
         Peer framework.
         """
-        Peer.__init__(self, maxpeers, serverport)
-        contents = os.listdir("peer2peertube/shared")
+        Peer.__init__(self, maxpeers, serverport, alias)
+        contents = os.listdir("peer2peertube/shared/%s" % alias)
         l = [None] * len(contents)
         self.files = dict(zip(contents, l))  # available files: name --> peerid mapping
         print(self.files)
@@ -185,16 +185,16 @@ class FilerPeer(Peer):
             peerconn.senddata(ERROR, 'File not found')
             return
         try:
-            fd = open(fname, 'r')
-            filedata = ''
+            fd = open('peer2peertube/shared/%s/%s' % (self.alias, fname), 'rb')
             while True:
                 data = fd.read(204800)
                 if not len(data):
                     break
                 peerconn.senddata(REPLY, data)
-                filedata += data
             fd.close()
         except:
+            if self.debug:
+                traceback.print_exc()
             self.__debug('Error reading file %s' % fname)
             peerconn.senddata(ERROR, 'Error reading file')
             return

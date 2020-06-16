@@ -1,6 +1,6 @@
 """
 Module implementing simple Peer to Peer Tube GUI for a simple p2p network.
- # python -m peer2peertube.main.py 8888 5 127.0.0.1:8889
+ # python -m peer2peertube.main.py 8888 5 127.0.0.1:8889 alias
 """
 from tkinter import *
 
@@ -8,12 +8,12 @@ from .fileutils import *
 
 
 class Gui(Frame):
-    def __init__(self, firstpeer, hops=2, maxpeers=5, serverport=5678, master=None):
+    def __init__(self, firstpeer, hops=2, maxpeers=5, serverport=5678, alias='tmp', master=None):
         Frame.__init__(self, master)
         self.grid()
         self.createWidgets()
-        self.master.title("Peer to Peer Youtube %d" % serverport)
-        self.peer = FilerPeer(maxpeers, serverport)
+        self.master.title("%s: %d" % (alias, serverport))
+        self.peer = FilerPeer(maxpeers, serverport, alias)
         self.peer.load_all_peer_saved()
         self.peer.reestablish_connections()
 
@@ -182,7 +182,8 @@ def main():
     serverport = int(sys.argv[1])
     maxpeers = sys.argv[2]
     peerid = sys.argv[3]
-    app = Gui(firstpeer=peerid, maxpeers=maxpeers, serverport=serverport)
+    alias = sys.argv[4]
+    app = Gui(firstpeer=peerid, maxpeers=maxpeers, serverport=serverport, alias=alias)
     app.mainloop()
 
 
