@@ -250,7 +250,7 @@ class Peer:
                     msgreply.append(onereply)
                     self.__debug('Got reply %s: %s'
                                  % (pid, str(msgreply)))
-                    onereply = peerconn.recvdata(file_recv, msgdata)
+                    onereply = peerconn.recvdata(file_recv, msgdata, self.alias)
             peerconn.close()
         except KeyboardInterrupt:
             raise
@@ -353,7 +353,6 @@ class PeerConnection:
         """
         if isinstance(msgdata, str):
             msgdata = msgdata.encode('ascii')
-        print('senddata', msgtype, msgdata)
         try:
             msg = self.__makemsg(msgtype, msgdata)
             # self.sd.write(msg)
@@ -421,7 +420,10 @@ class PeerConnection:
                 traceback.print_exc()
             return None, None
 
-        return msgtype.decode('ascii'), msg.decode('ascii')
+        if fname and file_recv:
+            return msgtype.decode('ascii'), msg
+        else:
+            return msgtype.decode('ascii'), msg.decode('ascii')
 
     def close(self):
         """

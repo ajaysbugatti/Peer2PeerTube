@@ -1,5 +1,5 @@
 """
-Module implementing simple Peer to Peer Tube GUI for a simple p2p network.
+Module implementing simple Peer Tube GUI for a simple p2p network.
  # python -m peer2peertube.main.py 8888 5 127.0.0.1:8889 alias
 """
 from tkinter import *
